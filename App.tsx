@@ -5,151 +5,138 @@
  * @format
  */
 
+import React, {useEffect, useRef, useState} from 'react';
 import {
-  createBottomTabNavigator,
-  useBottomTabBarHeight,
-} from '@react-navigation/bottom-tabs';
-import {NavigationContainer} from '@react-navigation/native';
-import React, {useState} from 'react';
-import {FlatList, Image, StyleSheet} from 'react-native';
-import VideoItem from './src/screen/VideoItem';
-import {WINDOW_HEIGHT} from './src/utils/utils';
-import videosData from './src/videosData';
+  Image,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+  SafeAreaView,
+  Animated,
+  PanResponder,
+} from 'react-native';
+import {WINDOW_WIDTH, WINDOW_HEIGHT} from './src/utils/utils';
 
-const HomeScreen = () => {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const bottomTabHeight = useBottomTabBarHeight();
-  return (
-    <FlatList
-      data={videosData}
-      pagingEnabled
-      renderItem={({item, index}) => (
-        <VideoItem data={item} isActive={index === activeIndex} />
-      )}
-      onScroll={e => {
-        const index = Math.round(
-          e.nativeEvent.contentOffset.y / (WINDOW_HEIGHT - bottomTabHeight),
-        );
-        setActiveIndex(index);
-      }}
-    />
-  );
-};
-
-const BottomTab = createBottomTabNavigator();
+const BOTTOM_SHEET_MAX_HEIGHT = WINDOW_HEIGHT * 0.6;
+const BOTTOM_SHEET_MIN_HEIGHT = WINDOW_HEIGHT * 0.1;
+const MAX_UPWARD_TRANSLATE_Y =
+  BOTTOM_SHEET_MIN_HEIGHT - BOTTOM_SHEET_MAX_HEIGHT;
+const MAX_DOWNWARD_TRANSLATE_Y = 0;
+const DRAG_THRESHOLD = 50;
 
 function App(): JSX.Element {
+  const animatedValue = useRef(new Animated.Value(0)).current;
+  console.log('animatedValue ', animatedValue);
+  let lastGestureDy = useRef(0);
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderGrant: () => {
+        // animatedValue.setOffset(lastGestureDy.current);
+      },
+      onPanResponderMove: (e, gesture) => {
+        animatedValue.setValue(gesture.dy);
+      },
+      onPanResponderRelease: (e, gesture) => {
+        animatedValue.flattenOffset();
+        lastGestureDy.current += gesture.dy;
+        // if (lastGestureDy.current < MAX_UPWARD_TRANSLATE_Y) {
+        //   lastGestureDy.current = MAX_UPWARD_TRANSLATE_Y;
+        // } else if (lastGestureDy.current > MAX_DOWNWARD_TRANSLATE_Y) {
+        //   lastGestureDy.current = MAX_DOWNWARD_TRANSLATE_Y;
+        // }
+
+        if (gesture.dy > 0) {
+          if (gesture.dy <= DRAG_THRESHOLD) {
+            springAnimation('up');
+          } else {
+            springAnimation('down');
+          }
+        } else {
+          if (gesture.dy >= -DRAG_THRESHOLD) {
+            springAnimation('down');
+          } else {
+            springAnimation('up');
+          }
+        }
+      },
+    }),
+  ).current;
+
+  const springAnimation = (direction: 'up' | 'down') => {
+    lastGestureDy.current =
+      direction === 'up' ? MAX_UPWARD_TRANSLATE_Y : MAX_DOWNWARD_TRANSLATE_Y;
+    Animated.spring(animatedValue, {
+      toValue: lastGestureDy.current,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const bottomSheetAnimation = {
+    transform: [
+      {
+        translateY: animatedValue.interpolate({
+          inputRange: [MAX_UPWARD_TRANSLATE_Y, MAX_DOWNWARD_TRANSLATE_Y],
+          outputRange: [MAX_UPWARD_TRANSLATE_Y, MAX_DOWNWARD_TRANSLATE_Y],
+          extrapolate: 'clamp',
+        }),
+      },
+    ],
+  };
+
   return (
-    <NavigationContainer>
-      <BottomTab.Navigator
-        screenOptions={{
-          tabBarStyle: {backgroundColor: '#000'},
-          headerShown: false,
-          tabBarActiveTintColor: 'white',
-        }}>
-        <BottomTab.Screen
-          name="Home"
-          component={HomeScreen}
-          options={{
-            tabBarLabel: 'Home',
-            // eslint-disable-next-line react/no-unstable-nested-components
-            tabBarIcon: ({focused}) => (
-              <Image
-                source={require('./src/assets/images/home.png')}
-                style={[
-                  styles.bottomTabIcon,
-                  focused && styles.bottomTabIconFocused,
-                ]}
-              />
-            ),
-          }}
-        />
-        <BottomTab.Screen
-          name="Discover"
-          component={HomeScreen}
-          options={{
-            tabBarLabel: 'Discover',
-            // eslint-disable-next-line react/no-unstable-nested-components
-            tabBarIcon: ({focused}) => (
-              <Image
-                source={require('./src/assets/images/search.png')}
-                style={[
-                  styles.bottomTabIcon,
-                  focused && styles.bottomTabIconFocused,
-                ]}
-              />
-            ),
-          }}
-        />
-        <BottomTab.Screen
-          name="NewVideo"
-          component={HomeScreen}
-          options={{
-            tabBarLabel: () => null,
-            // eslint-disable-next-line react/no-unstable-nested-components
-            tabBarIcon: ({focused}) => (
-              <Image
-                source={require('./src/assets/images/new-video.png')}
-                style={[
-                  styles.newVideo,
-                  // focused && styles.bottomTabIconFocused,
-                ]}
-              />
-            ),
-          }}
-        />
-        <BottomTab.Screen
-          name="Inbox"
-          component={HomeScreen}
-          options={{
-            tabBarLabel: 'Inbox',
-            // eslint-disable-next-line react/no-unstable-nested-components
-            tabBarIcon: ({focused}) => (
-              <Image
-                source={require('./src/assets/images/message.png')}
-                style={[
-                  styles.bottomTabIcon,
-                  focused && styles.bottomTabIconFocused,
-                ]}
-              />
-            ),
-          }}
-        />
-        <BottomTab.Screen
-          name="Profile"
-          component={HomeScreen}
-          options={{
-            tabBarLabel: 'Profile',
-            // eslint-disable-next-line react/no-unstable-nested-components
-            tabBarIcon: ({focused}) => (
-              <Image
-                source={require('./src/assets/images/user.png')}
-                style={[
-                  styles.bottomTabIcon,
-                  focused && styles.bottomTabIconFocused,
-                ]}
-              />
-            ),
-          }}
-        />
-      </BottomTab.Navigator>
-    </NavigationContainer>
+    <SafeAreaView style={styles.container}>
+      <Animated.View style={[styles.bottomSheet, bottomSheetAnimation]}>
+        <View style={styles.dragHandleArea} {...panResponder.panHandlers}>
+          <View style={styles.dragHandle} />
+        </View>
+      </Animated.View>
+    </SafeAreaView>
   );
 }
 
 export default App;
 
 const styles = StyleSheet.create({
-  bottomTabIcon: {
-    width: 20,
-    height: 20,
-    tintColor: 'gray',
+  container: {
+    flex: 1,
+    // backgroundColor: 'grey',
   },
-  bottomTabIconFocused: {
-    tintColor: 'white',
+  bottomSheet: {
+    position: 'absolute',
+    width: '100%',
+    height: BOTTOM_SHEET_MAX_HEIGHT,
+    bottom: BOTTOM_SHEET_MIN_HEIGHT - BOTTOM_SHEET_MAX_HEIGHT,
+    ...Platform.select({
+      android: {elevation: 10},
+      ios: {
+        shadowColor: '#a8bed2',
+        shadowOpacity: 1,
+        shadowRadius: 6,
+        shadowOffset: {
+          width: 2,
+          height: 2,
+        },
+      },
+    }),
+    backgroundColor: 'white',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
   },
-  newVideo: {
-    height: 24,
-    width: 48,
+  dragHandle: {
+    width: 100,
+    height: 6,
+    backgroundColor: '#d3d3d3',
+    borderRadius: 10,
+  },
+  dragHandleArea: {
+    width: 132,
+    height: 32,
+    alignSelf: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
+    // backgroundColor: 'blue',
   },
 });
