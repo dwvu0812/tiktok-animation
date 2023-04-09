@@ -17,6 +17,7 @@ import {
   Animated,
   PanResponder,
 } from 'react-native';
+import MomoHeader from './src/screen/MomoHeader';
 import {WINDOW_WIDTH, WINDOW_HEIGHT} from './src/utils/utils';
 
 const BOTTOM_SHEET_MAX_HEIGHT = WINDOW_HEIGHT * 0.6;
@@ -28,7 +29,7 @@ const DRAG_THRESHOLD = 50;
 
 function App(): JSX.Element {
   const animatedValue = useRef(new Animated.Value(0)).current;
-  console.log('animatedValue ', animatedValue);
+  // console.log('animatedValue ', animatedValue);
   let lastGestureDy = useRef(0);
   const panResponder = useRef(
     PanResponder.create({
@@ -88,11 +89,12 @@ function App(): JSX.Element {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Animated.View style={[styles.bottomSheet, bottomSheetAnimation]}>
+      {/* <Animated.View style={[styles.bottomSheet, bottomSheetAnimation]}>
         <View style={styles.dragHandleArea} {...panResponder.panHandlers}>
           <View style={styles.dragHandle} />
         </View>
-      </Animated.View>
+      </Animated.View> */}
+      <MomoHeader />
     </SafeAreaView>
   );
 }
